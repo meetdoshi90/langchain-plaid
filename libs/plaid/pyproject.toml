@@ -1,0 +1,44 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "langchain-plaid"
+version = "0.1.0"
+description = "LangChain integration for NextPlaid multi-vector search"
+authors = ["Meet Doshi"]
+license = "Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/meetdoshi90/langchain-plaid"
+keywords = ["langchain", "colbert", "multi-vector", "plaid", "vector-store"]
+
+packages = [{ include = "langchain_plaid" }]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<4.0"
+langchain-core = ">=0.3.0"
+requests = ">=2.28.0"
+# next-plaid-client: swap this for the PyPI version once published
+next-plaid-client = { path = "../../../next-plaid/next-plaid-api/python-sdk", develop = true }
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.0"
+pytest-asyncio = ">=0.23"
+ruff = ">=0.1.0"
+mypy = ">=1.0"
+
+[tool.poetry.group.test.dependencies]
+pytest = ">=7.0"
+pytest-asyncio = ">=0.23"
+# used in integration tests to spin up the server
+requests = ">=2.28.0"
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I"]
+
+[tool.mypy]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

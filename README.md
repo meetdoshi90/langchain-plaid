@@ -2,7 +2,7 @@
 
 This repository contains 1 package with {partner} integrations with LangChain:
 
-- [langchain-{package_lower}](https://pypi.org/project/langchain-{package_lower}/)
+- [langchain-plaid](https://pypi.org/project/langchain-plaid/)
 
 ## Initial Repo Checklist (Remove this section after completing)
 
