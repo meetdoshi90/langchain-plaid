@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any, Iterable, List, Optional, Sequence, Tuple, Type
+from typing import Any, Iterable, List, Optional, Sequence, Tuple, Type, Union
 
 import requests
 from langchain_core.documents import Document
@@ -22,6 +22,10 @@ class NextPlaidVectorStore(VectorStore):
             Returns one multi-vector matrix per document.
         embed_query(text: str) -> List[List[float]]
             Returns a single multi-vector matrix for the query.
+
+    For image support (e.g. ColPali), the embeddings object should also implement:
+        embed_images(images: List[PIL.Image.Image]) -> List[List[List[float]]]
+            Returns one multi-vector matrix per image.
 
     Args:
         url: Base URL of the NextPlaid API server (e.g. "http://localhost:8080").
@@ -93,6 +97,67 @@ class NextPlaidVectorStore(VectorStore):
     # Write operations
     # ------------------------------------------------------------------
 
+    def _prepare_ids_and_metadatas(
+        self,
+        n: int,
+        ids: Optional[List[str]],
+        metadatas: Optional[List[dict]],
+        page_contents: Optional[List[str]] = None,
+    ) -> Tuple[List[str], List[dict]]:
+        """Validate and fill in ids/metadatas, attaching page_content when provided."""
+        if ids is None:
+            ids = [str(uuid.uuid4()) for _ in range(n)]
+        else:
+            ids = [i if i is not None else str(uuid.uuid4()) for i in ids]
+
+        if metadatas is None:
+            metadatas = [{} for _ in range(n)]
+
+        if len(ids) != n:
+            raise ValueError(f"ids length ({len(ids)}) must match items length ({n})")
+        if len(metadatas) != n:
+            raise ValueError(f"metadatas length ({len(metadatas)}) must match items length ({n})")
+
+        if page_contents is not None:
+            metadatas = [
+                {"langchain_id": doc_id, "page_content": text, **meta}
+                for doc_id, text, meta in zip(ids, page_contents, metadatas)
+            ]
+        else:
+            metadatas = [
+                {"langchain_id": doc_id, **meta}
+                for doc_id, meta in zip(ids, metadatas)
+            ]
+
+        return ids, metadatas
+
+    def _add_embeddings(
+        self,
+        embeddings: List[List[List[float]]],
+        metadatas: List[dict],
+        ids: List[str],
+    ) -> List[str]:
+        """Shared implementation: upsert pre-computed embeddings into the index.
+
+        Handles delete-before-insert (upsert semantics), constructs the payload,
+        and fires the /update request. Called by add_texts, add_images, add_items.
+        """
+        self._delete_by_ids_silent(ids)
+        if self._write_timeout > 0:
+            self._wait_for_delete(ids, timeout=self._write_timeout)
+
+        documents = [{"embeddings": emb} for emb in embeddings]
+
+        use_wait = self._write_timeout > 0
+        resp = requests.post(
+            f"{self._url}/indices/{self._index_name}/update",
+            params={"wait": "true"} if use_wait else {},
+            json={"documents": documents, "metadata": metadatas},
+            timeout=self._write_timeout + 10 if use_wait else None,
+        )
+        resp.raise_for_status()
+        return ids
+
     def add_texts(
         self,
         texts: Iterable[str],
@@ -109,47 +174,129 @@ class NextPlaidVectorStore(VectorStore):
         if not texts_list:
             return []
 
-        if ids is None:
-            ids = [str(uuid.uuid4()) for _ in texts_list]
-        else:
-            ids = [i if i is not None else str(uuid.uuid4()) for i in ids]
+        ids, meta_payload = self._prepare_ids_and_metadatas(
+            len(texts_list), ids, metadatas, page_contents=texts_list
+        )
+        embeddings = self._embedding.embed_documents(texts_list)
+        return self._add_embeddings(embeddings, meta_payload, ids)
+
+    def add_images(
+        self,
+        images: List[Any],  # List[PIL.Image.Image]
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> List[str]:
+        """Add images to the index.
+
+        Requires the embeddings object to implement:
+            embed_images(images: List[PIL.Image.Image]) -> List[List[List[float]]]
+
+        ``source_type="image"`` is injected into metadata automatically unless
+        already set. ``page_content`` is stored as an empty string.
+
+        Example:
+            .. code-block:: python
+
+                from PIL import Image
+                imgs = [Image.open("page1.png"), Image.open("page2.png")]
+                store.add_images(
+                    imgs,
+                    metadatas=[{"file": "doc.pdf", "page": 1},
+                               {"file": "doc.pdf", "page": 2}],
+                )
+        """
+        if not images:
+            return []
+
+        if not hasattr(self._embedding, "embed_images"):
+            raise TypeError(
+                f"{type(self._embedding).__name__} does not implement embed_images(). "
+                "Use a ColPali-compatible embeddings class."
+            )
 
         if metadatas is None:
-            metadatas = [{} for _ in texts_list]
+            metadatas = [{"source_type": "image"} for _ in images]
+        else:
+            metadatas = [
+                {"source_type": "image", **m} for m in metadatas
+            ]
 
-        if len(ids) != len(texts_list):
-            raise ValueError(
-                f"ids length ({len(ids)}) must match texts length ({len(texts_list)})"
-            )
-        if len(metadatas) != len(texts_list):
-            raise ValueError(
-                f"metadatas length ({len(metadatas)}) must match texts length "
-                f"({len(texts_list)})"
-            )
-
-        # Upsert semantics: delete existing docs with these IDs first
-        self._delete_by_ids_silent(ids)
-        if self._write_timeout > 0:
-            self._wait_for_delete(ids, timeout=self._write_timeout)
-
-        embeddings = self._embedding.embed_documents(texts_list)
-        documents = [{"embeddings": emb} for emb in embeddings]
-
-        meta_payload = [
-            {"langchain_id": doc_id, "page_content": text, **meta}
-            for doc_id, text, meta in zip(ids, texts_list, metadatas)
-        ]
-
-        use_wait = self._write_timeout > 0
-        resp = requests.post(
-            f"{self._url}/indices/{self._index_name}/update",
-            params={"wait": "true"} if use_wait else {},
-            json={"documents": documents, "metadata": meta_payload},
-            timeout=self._write_timeout + 10 if use_wait else None,
+        ids, meta_payload = self._prepare_ids_and_metadatas(
+            len(images), ids, metadatas, page_contents=[""] * len(images)
         )
-        resp.raise_for_status()
+        embeddings = self._embedding.embed_images(images)
+        return self._add_embeddings(embeddings, meta_payload, ids)
 
-        return ids
+    def add_items(
+        self,
+        items: List[Any],  # List[Union[str, PIL.Image.Image]]
+        metadatas: Optional[List[dict]] = None,
+        ids: Optional[List[str]] = None,
+        **kwargs: Any,
+    ) -> List[str]:
+        """Add a mixed list of texts and images to the index.
+
+        Requires the embeddings object to implement both embed_documents()
+        and embed_images(). Items are encoded in two batched calls (one for
+        all texts, one for all images) and recombined in original order.
+
+        Example:
+            .. code-block:: python
+
+                from PIL import Image
+                store.add_items(
+                    ["some text", Image.open("fig1.png"), "more text"],
+                    metadatas=[
+                        {"source_type": "text"},
+                        {"source_type": "image", "page": 1},
+                        {"source_type": "text"},
+                    ],
+                )
+        """
+        if not items:
+            return []
+
+        if not hasattr(self._embedding, "embed_images"):
+            raise TypeError(
+                f"{type(self._embedding).__name__} does not implement embed_images(). "
+                "Use a ColPali-compatible embeddings class for mixed input."
+            )
+
+        n = len(items)
+        if metadatas is None:
+            metadatas = [{} for _ in range(n)]
+
+        # Split into text and image buckets, preserving original indices
+        text_indices  = [i for i, x in enumerate(items) if isinstance(x, str)]
+        image_indices = [i for i, x in enumerate(items) if not isinstance(x, str)]
+
+        texts  = [items[i] for i in text_indices]
+        images = [items[i] for i in image_indices]
+
+        # Encode each bucket in one batched call
+        text_embeddings  = self._embedding.embed_documents(texts)  if texts  else []
+        image_embeddings = self._embedding.embed_images(images)     if images else []
+
+        # Reconstruct in original order
+        text_iter  = iter(text_embeddings)
+        image_iter = iter(image_embeddings)
+        embeddings: List[List[List[float]]] = [None] * n  # type: ignore[list-item]
+        page_contents: List[str] = [""] * n
+
+        for i in text_indices:
+            embeddings[i]    = next(text_iter)
+            page_contents[i] = items[i]
+
+        for i in image_indices:
+            embeddings[i] = next(image_iter)
+            if "source_type" not in metadatas[i]:
+                metadatas[i] = {"source_type": "image", **metadatas[i]}
+
+        ids, meta_payload = self._prepare_ids_and_metadatas(
+            n, ids, metadatas, page_contents=page_contents
+        )
+        return self._add_embeddings(embeddings, meta_payload, ids)
 
     def delete(self, ids=None, **kwargs):
         if not ids:
@@ -315,7 +462,7 @@ class NextPlaidVectorStore(VectorStore):
             page_content = meta.pop("page_content", "")
             doc_id = meta.pop("langchain_id", None)
             if doc_id is None:
-                continue  # safety fallback
+                continue
             meta.pop("_subset_", None)
             docs_and_scores.append(
                 (Document(page_content=page_content, metadata=meta, id=doc_id), float(score))
