@@ -18,8 +18,7 @@ packages = [{ include = "langchain_plaid" }]
 python = ">=3.9,<4.0"
 langchain-core = ">=0.3.0"
 requests = ">=2.28.0"
-# next-plaid-client: swap this for the PyPI version once published
-next-plaid-client = { path = "../../../next-plaid/next-plaid-api/python-sdk", develop = true }
+next-plaid-client = { git = "https://github.com/meetdoshi90/next-plaid.git", branch = "main", subdirectory = "next-plaid-api/python-sdk" }
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.0"
