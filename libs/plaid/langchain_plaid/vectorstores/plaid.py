@@ -410,7 +410,7 @@ class NextPlaidVectorStore(VectorStore):
 
     def similarity_search_by_vector(
         self,
-        embedding: List[List[float]],
+        embedding: List[List[float]], # type: ignore[override]
         k: int = 4,
         filter: Optional[dict] = None,
         **kwargs: Any,
