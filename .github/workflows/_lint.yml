@@ -43,3 +43,5 @@ jobs:
       - name: Analysing the tests with our lint
         run: |
           make lint_tests
+        env:
+          RUFF_OUTPUT_FORMAT: text
