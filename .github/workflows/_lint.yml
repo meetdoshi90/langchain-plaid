@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install poetry
-          poetry install --with dev
+          poetry install --with lint --with dev
       - name: Analysing the code with our lint
         run: |
           make lint_package
