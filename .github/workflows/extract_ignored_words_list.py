@@ -1,3 +1,4 @@
+import os
 import toml
 
 pyproject_toml = toml.load("pyproject.toml")
@@ -7,6 +8,5 @@ ignore_words_list = (
     pyproject_toml.get("tool", {}).get("codespell", {}).get("ignore-words-list")
 )
 
-import os
 with open(os.environ["GITHUB_OUTPUT"], "a") as f:
     f.write(f"ignore_words_list={ignore_words_list or ''}\n")
