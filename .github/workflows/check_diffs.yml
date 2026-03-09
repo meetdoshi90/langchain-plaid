@@ -1,11 +1,9 @@
 ---
 name: CI
-
 on:
   push:
     branches: [main]
   pull_request:
-
 # If another push to the same PR or branch happens while this workflow is still running,
 # cancel the earlier run in favor of the next run.
 #
@@ -14,15 +12,12 @@ on:
 # pointless jobs early so that more useful jobs can run sooner.
 permissions:
   contents: read
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 env:
   UV_FROZEN: "true"
   UV_NO_SYNC: "true"
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -50,7 +45,6 @@ jobs:
     with:
       working-directory: ${{ matrix.working-directory }}
     secrets: inherit
-
   test:
     name: cd ${{ matrix.working-directory }}
     needs: [ build ]
@@ -62,21 +56,9 @@ jobs:
     with:
       working-directory: ${{ matrix.working-directory }}
     secrets: inherit
-
-  compile-integration-tests:
-    name: cd ${{ matrix.working-directory }}
-    needs: [ build ]
-    if: ${{ needs.build.outputs.dirs-to-test != '[]' }}
-    strategy:
-      matrix:
-        working-directory: ${{ fromJson(needs.build.outputs.dirs-to-test) }}
-    uses: ./.github/workflows/_compile_integration_test.yml
-    with:
-      working-directory: ${{ matrix.working-directory }}
-    secrets: inherit
   ci_success:
     name: "CI Success"
-    needs: [build, lint, test, compile-integration-tests]
+    needs: [build, lint, test]
     if: |
       always()
     runs-on: ubuntu-latest

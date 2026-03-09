@@ -89,6 +89,8 @@ class NextPlaidVectorStore(VectorStore):
                     "config": {"nbits": self._nbits},
                 },
             )
+            if resp.status_code == 409:
+                return
             resp.raise_for_status()
         elif resp.status_code != 200:
             resp.raise_for_status()
