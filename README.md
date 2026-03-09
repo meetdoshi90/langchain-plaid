@@ -1,6 +1,6 @@
 # 🦜️🔗 LangChain NextPlaid
 
-This repository contains the `langchain-plaid` package — a LangChain integration for [NextPlaid](https://github.com/your-org/next-plaid), a high-performance multi-vector (ColBERT-style) search server.
+This repository contains the `langchain-plaid` package — a LangChain integration for [NextPlaid](https://github.com/meetdoshi90/next-plaid), a high-performance multi-vector (ColBERT-style) search server.
 
 - [langchain-plaid on PyPI](https://pypi.org/project/langchain-plaid/) (WIP)
 
