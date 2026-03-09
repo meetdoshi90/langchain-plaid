@@ -67,8 +67,8 @@ jobs:
           import tomllib
           with open("pyproject.toml", "rb") as f:
               data = tomllib.load(f)
-          pkg_name = data["project"]["name"]
-          version = data["project"]["version"]
+          pkg_name = data["tool"]["poetry"]["name"]
+          version = data["tool"]["poetry"]["version"]
           with open(os.environ["GITHUB_OUTPUT"], "a") as f:
               f.write(f"pkg-name={pkg_name}\n")
               f.write(f"version={version}\n")

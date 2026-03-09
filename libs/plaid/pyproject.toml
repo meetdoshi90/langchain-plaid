@@ -23,6 +23,8 @@ next-plaid-client = { git = "https://github.com/meetdoshi90/next-plaid.git", bra
 [tool.poetry.group.dev.dependencies]
 pytest = ">=7.0"
 pytest-asyncio = ">=0.23"
+
+[tool.poetry.group.lint.dependencies]
 ruff = ">=0.1.0"
 mypy = ">=1.0"
 
@@ -41,3 +43,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[tool.codespell]
+ignore-words-list = "plaid,colbert,maxsim,ndcg"
+skip = "*.lock,dist,*.egg-info"

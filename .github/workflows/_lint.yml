@@ -53,7 +53,9 @@ jobs:
         # It doesn't matter how you change it, any change will cause a cache-bust.
         working-directory: ${{ inputs.working-directory }}
         run: |
-          uv sync --group lint --group typing
+          pip install poetry
+          poetry install --with dev
+        working-directory: ${{ inputs.working-directory }}
 
       - name: Analysing the code with our lint
         working-directory: ${{ inputs.working-directory }}
@@ -63,7 +65,7 @@ jobs:
       - name: Install unit+integration test dependencies
         working-directory: ${{ inputs.working-directory }}
         run: |
-          uv sync --inexact --group test --group test_integration
+          run: poetry install --with test
 
       - name: Analysing the code with our lint
         working-directory: ${{ inputs.working-directory }}

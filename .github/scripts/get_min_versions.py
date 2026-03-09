@@ -113,9 +113,13 @@ def get_min_version_from_toml(
         toml_data = tomllib.load(file)
 
     dependencies = defaultdict(list)
-    for dep in toml_data["project"]["dependencies"]:
-        requirement = Requirement(dep)
-        dependencies[requirement.name].append(requirement)
+    for dep_name, dep_spec in toml_data["tool"]["poetry"]["dependencies"].items():
+        if dep_name == "python":
+            continue
+        # Poetry uses ">=x.y.z" strings or dicts like {version = ">=x", extras = [...]}
+        spec = dep_spec if isinstance(dep_spec, str) else dep_spec.get("version", "*")
+        req = Requirement(f"{dep_name}{spec}")
+        dependencies[req.name].append(req)
 
     # Initialize a dictionary to store the minimum versions
     min_versions = {}
