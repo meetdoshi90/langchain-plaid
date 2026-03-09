@@ -11,6 +11,7 @@ The server can be started with:
 or:
     cargo run --release -p next-plaid-api
 """
+
 import os
 import time
 
@@ -26,6 +27,7 @@ TEST_INDEX = "langchain_integration_test"
 # ---------------------------------------------------------------------------
 # Fake ColBERT embeddings — deterministic, dim=4, 3 tokens per doc/query
 # ---------------------------------------------------------------------------
+
 
 class FakeColBERTEmbeddings:
     dim = 4
@@ -54,6 +56,7 @@ EMBEDDINGS = FakeColBERTEmbeddings()
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
+
 
 def _server_available() -> bool:
     try:
@@ -94,14 +97,13 @@ def _wait_for_index(url: str, index: str, min_docs: int = 1, timeout: float = 10
         except Exception:
             pass
         time.sleep(0.5)
-    pytest.fail(
-        f"Index '{index}' did not reach {min_docs} docs within {timeout}s"
-    )
+    pytest.fail(f"Index '{index}' did not reach {min_docs} docs within {timeout}s")
 
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.skipif(not _server_available(), reason="NextPlaid server not available")
 def test_add_and_search(store):

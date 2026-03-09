@@ -2,22 +2,24 @@
 
 These tests mock HTTP calls and do not require a running NextPlaid server.
 """
+
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from langchain_plaid.vectorstores.plaid import NextPlaidVectorStore, _dict_to_sql_filter
 
-
 # ---------------------------------------------------------------------------
 # Fake embeddings: returns deterministic multi-vector matrices
 # ---------------------------------------------------------------------------
+
 
 class FakeColBERTEmbeddings:
     """Fake ColBERT embeddings for unit testing.
 
     Returns 3 tokens × 4 dimensions per document/query.
     """
+
     dim = 4
     n_tokens = 3
 
@@ -37,6 +39,7 @@ FAKE_EMBEDDINGS = FakeColBERTEmbeddings()
 # Helper: mock a requests.Response
 # ---------------------------------------------------------------------------
 
+
 def _mock_response(status_code=200, json_data=None):
     mock = MagicMock()
     mock.status_code = status_code
@@ -48,6 +51,7 @@ def _mock_response(status_code=200, json_data=None):
 # ---------------------------------------------------------------------------
 # _dict_to_sql_filter
 # ---------------------------------------------------------------------------
+
 
 def test_dict_to_sql_filter_single():
     condition, params = _dict_to_sql_filter({"source": "wiki"})
@@ -74,13 +78,14 @@ def test_dict_to_sql_filter_empty():
 # Initialisation
 # ---------------------------------------------------------------------------
 
+
 @patch("langchain_plaid.vectorstores.plaid.requests.get")
 @patch("langchain_plaid.vectorstores.plaid.requests.post")
 def test_init_creates_index_when_not_found(mock_post, mock_get):
     mock_get.return_value = _mock_response(status_code=404)
     mock_post.return_value = _mock_response(status_code=200)
 
-    store = NextPlaidVectorStore(
+    NextPlaidVectorStore(
         url="http://localhost:8080",
         index_name="test",
         embedding=FAKE_EMBEDDINGS,
@@ -97,7 +102,7 @@ def test_init_creates_index_when_not_found(mock_post, mock_get):
 def test_init_skips_create_when_index_exists(mock_get):
     mock_get.return_value = _mock_response(status_code=200)
 
-    store = NextPlaidVectorStore(
+    NextPlaidVectorStore(
         url="http://localhost:8080",
         index_name="test",
         embedding=FAKE_EMBEDDINGS,
@@ -108,7 +113,7 @@ def test_init_skips_create_when_index_exists(mock_get):
 
 @patch("langchain_plaid.vectorstores.plaid.requests.get")
 def test_init_skip_create_flag(mock_get):
-    store = NextPlaidVectorStore(
+    NextPlaidVectorStore(
         url="http://localhost:8080",
         index_name="test",
         embedding=FAKE_EMBEDDINGS,
@@ -120,6 +125,7 @@ def test_init_skip_create_flag(mock_get):
 # ---------------------------------------------------------------------------
 # add_texts
 # ---------------------------------------------------------------------------
+
 
 @patch("langchain_plaid.vectorstores.plaid.requests.get")
 @patch("langchain_plaid.vectorstores.plaid.requests.delete")
@@ -157,6 +163,7 @@ def test_add_texts_generates_ids_when_none(mock_post, mock_delete, mock_get):
     assert len(ids) == 2
     # Should be UUID4 strings
     import uuid
+
     for id_ in ids:
         uuid.UUID(id_)  # raises if not valid UUID
 
@@ -205,6 +212,7 @@ def test_add_texts_empty_returns_empty(mock_get):
 # ---------------------------------------------------------------------------
 # delete
 # ---------------------------------------------------------------------------
+
 
 @patch("langchain_plaid.vectorstores.plaid.requests.get")
 @patch("langchain_plaid.vectorstores.plaid.requests.delete")
@@ -274,7 +282,9 @@ FAKE_SEARCH_RESPONSE = {
 @patch("langchain_plaid.vectorstores.plaid.requests.post")
 def test_similarity_search_returns_documents(mock_post, mock_get):
     mock_get.return_value = _mock_response(status_code=200)
-    mock_post.return_value = _mock_response(status_code=200, json_data=FAKE_SEARCH_RESPONSE)
+    mock_post.return_value = _mock_response(
+        status_code=200, json_data=FAKE_SEARCH_RESPONSE
+    )
 
     store = NextPlaidVectorStore(
         url="http://localhost:8080",
@@ -296,7 +306,9 @@ def test_similarity_search_returns_documents(mock_post, mock_get):
 @patch("langchain_plaid.vectorstores.plaid.requests.post")
 def test_similarity_search_with_score(mock_post, mock_get):
     mock_get.return_value = _mock_response(status_code=200)
-    mock_post.return_value = _mock_response(status_code=200, json_data=FAKE_SEARCH_RESPONSE)
+    mock_post.return_value = _mock_response(
+        status_code=200, json_data=FAKE_SEARCH_RESPONSE
+    )
 
     store = NextPlaidVectorStore(
         url="http://localhost:8080",
@@ -316,7 +328,9 @@ def test_similarity_search_with_score(mock_post, mock_get):
 @patch("langchain_plaid.vectorstores.plaid.requests.post")
 def test_similarity_search_uses_filtered_endpoint_with_filter(mock_post, mock_get):
     mock_get.return_value = _mock_response(status_code=200)
-    mock_post.return_value = _mock_response(status_code=200, json_data=FAKE_SEARCH_RESPONSE)
+    mock_post.return_value = _mock_response(
+        status_code=200, json_data=FAKE_SEARCH_RESPONSE
+    )
 
     store = NextPlaidVectorStore(
         url="http://localhost:8080",
@@ -338,7 +352,9 @@ def test_similarity_search_uses_filtered_endpoint_with_filter(mock_post, mock_ge
 @patch("langchain_plaid.vectorstores.plaid.requests.post")
 def test_similarity_search_uses_plain_endpoint_without_filter(mock_post, mock_get):
     mock_get.return_value = _mock_response(status_code=200)
-    mock_post.return_value = _mock_response(status_code=200, json_data=FAKE_SEARCH_RESPONSE)
+    mock_post.return_value = _mock_response(
+        status_code=200, json_data=FAKE_SEARCH_RESPONSE
+    )
 
     store = NextPlaidVectorStore(
         url="http://localhost:8080",
