@@ -408,9 +408,9 @@ class NextPlaidVectorStore(VectorStore):
             query_embedding, k=k, filter=filter, **kwargs
         )
 
-    def similarity_search_by_vector(
+    def similarity_search_by_vector( # type: ignore[override]
         self,
-        embedding: List[List[float]], # type: ignore[override]
+        embedding: List[List[float]],
         k: int = 4,
         filter: Optional[dict] = None,
         **kwargs: Any,
