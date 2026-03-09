@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "langchain-plaid"
-version = "0.1.0"
+version = "0.1.0.dev0"
 description = "LangChain integration for NextPlaid multi-vector search"
 authors = ["Meet Doshi"]
 license = "Apache-2.0"
