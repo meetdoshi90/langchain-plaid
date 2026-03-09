@@ -44,4 +44,4 @@ jobs:
         run: |
           make lint_tests
         env:
-          RUFF_OUTPUT_FORMAT: text
+          RUFF_OUTPUT_FORMAT: concise
